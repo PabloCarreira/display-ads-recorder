@@ -1,4 +1,4 @@
-const puppeteer = require("puppeteer");
+const { chromium } = require("playwright");
 const path = require("path");
 const fs = require("fs-extra");
 const minimal_args = require("../data/minimalArgs");
@@ -8,7 +8,7 @@ const getFramesArrays = require("./getFramesArrays");
 const screenshotBaseFilename = "screenshot_";
 const chromiumInstancesAmount = 1;
 
-module.exports = async function recordDisplayAd({ target, url, fps }) {
+module.exports = async function recordDisplayAd({ target, url, fps, onProgress = null }) {
   return new Promise(async (resolve) => {
     let screenshotBase = path.join(path.dirname(target), ".cache/screenshots/");
 
@@ -16,15 +16,18 @@ module.exports = async function recordDisplayAd({ target, url, fps }) {
       fs.mkdirSync(screenshotBase, { recursive: true });
     await fs.emptyDir(screenshotBase); // remove old screenshots
 
-    const browser = await puppeteer.launch({
-      //executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', // if we ever want to include video. but then the video needs to be controlled by the timeline..
+    const browser = await chromium.launch({
       headless: true, // headless to false for testing
       args: minimal_args,
       ignoreHTTPSErrors: true,
-      defaultViewport: null,
     });
 
-    const page = await browser.newPage();
+    const context = await browser.newContext({
+      viewport: null, // This allows dynamic viewport sizing
+      ignoreHTTPSErrors: true,
+    });
+
+    const page = await context.newPage();
 
     let framesArray;
     let currentIndex = 0;
@@ -42,6 +45,11 @@ module.exports = async function recordDisplayAd({ target, url, fps }) {
       });
 
       currentIndex++;
+      
+      // Report progress
+      if (onProgress) {
+        onProgress(currentIndex, framesArray.length);
+      }
 
       if (currentIndex < framesArray.length) {
         // request next frame
@@ -63,10 +71,9 @@ module.exports = async function recordDisplayAd({ target, url, fps }) {
 
         const deviceScaleFactor = await page.evaluate('window.devicePixelRatio') // so the pixels are real, not blurred
         
-        await page.setViewport({
+        await page.setViewportSize({
           width: animationInfo.width,
           height: animationInfo.height,
-          deviceScaleFactor,
         });
         
         framesArray = getFramesArrays({
@@ -96,7 +103,7 @@ module.exports = async function recordDisplayAd({ target, url, fps }) {
     }
 
     function listenFor(page, type) {
-      return page.evaluateOnNewDocument((type) => {
+      return page.addInitScript((type) => {
         window.addEventListener(type, (e) => {
           window.onMessageReceivedEvent({ type, data: e.data });
         });

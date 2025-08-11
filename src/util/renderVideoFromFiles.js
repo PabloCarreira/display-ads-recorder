@@ -16,9 +16,20 @@ module.exports = async function renderVideoFromFiles(
       process.addInput(input);
       process.fpsInput(fps);
       process.fps(fps);
-      process.videoBitrate(10000);
+      
+      // High quality settings
+      process.videoBitrate(50000); // Increased from 10000 to 50000 kbps
+      process.videoCodec('libx264'); // Explicitly set codec
+      
       process.output(output);
-      process.outputOptions(['-pix_fmt yuv420p'])
+      process.outputOptions([
+        '-pix_fmt yuv420p',
+        '-crf 18', // Constant Rate Factor: 18 = very high quality (0-51 scale, lower = better)
+        '-preset slow', // Slower encoding for better quality
+        '-profile:v high', // H.264 high profile for better compression efficiency
+        '-movflags +faststart' // Optimize for web streaming
+      ]);
+      
       process.on("end", () => {
         resolve(output);
       });

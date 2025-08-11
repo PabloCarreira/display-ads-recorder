@@ -1,4 +1,4 @@
-const puppeteer = require("puppeteer");
+const { chromium } = require("playwright");
 const path = require("path");
 const fs = require("fs-extra");
 const minimal_args = require("../data/minimalArgs");
@@ -15,12 +15,16 @@ module.exports = async function recordDisplayAd({
   //   )}KB`
   // );
   return new Promise(async (resolve) => {
-    const browser = await puppeteer.launch({
+    const browser = await chromium.launch({
       headless: true, // headless to false for testing
       args: minimal_args,
     });
 
-    const page = await browser.newPage();
+    const context = await browser.newContext({
+      ignoreHTTPSErrors: true,
+    });
+
+    const page = await context.newPage();
 
     await page.exposeFunction("onMessageReceivedEvent", async (e) => {
       switch (e.data.name) {
@@ -35,7 +39,7 @@ module.exports = async function recordDisplayAd({
     });
 
     async function handleAnimationInfoReceived(animationInfo) {
-      await page.setViewport({
+      await page.setViewportSize({
         width: animationInfo.width,
         height: animationInfo.height,
       });
@@ -90,7 +94,7 @@ module.exports = async function recordDisplayAd({
     }
 
     function listenFor(page, type) {
-      return page.evaluateOnNewDocument((type) => {
+      return page.addInitScript((type) => {
         window.addEventListener(type, (e) => {
           window.onMessageReceivedEvent({ type, data: e.data });
         });

@@ -11,7 +11,7 @@ const port = 3000;
 const fs = require("fs/promises")
 // const { log } = require("console");
 
-// allows to run multiple puppeteers in parallel
+// allows to run multiple playwright instances in parallel
 process.setMaxListeners(0);
 
 module.exports = async function displayAdsRecorder(options, chunkSize = 10) {
@@ -31,7 +31,7 @@ module.exports = async function displayAdsRecorder(options, chunkSize = 10) {
     adSelection.output.includes("mp4") ||
     adSelection.output.includes("gif")
   ) {
-    await runWithChunks(recordScreenshots, "capturing screenshots")
+    await runWithChunks(recordScreenshots, "capturing screenshots with Playwright")
 
     await runWithChunks(
       recordVideo,
@@ -56,14 +56,15 @@ module.exports = async function displayAdsRecorder(options, chunkSize = 10) {
     await runWithChunks(recordBackup, "making backup images")
   }
   
-  async function recordScreenshots(adLocation) {
+  async function recordScreenshots(adLocation, progressCallback) {
     const [url, htmlBaseDirName] = urlFromAdLocation(adLocation);
 
-    // record screenshots from ad using puppeteer
+    // record screenshots from ad using Playwright
     await recordAd({
       target: adLocation,
       url,
       fps: adSelection.fps,
+      onProgress: progressCallback
     });
   }
 
@@ -123,15 +124,41 @@ module.exports = async function displayAdsRecorder(options, chunkSize = 10) {
 
   async function runWithChunks(fn, name) {
     const startTime = new Date().getTime();
+    // Ensure name doesn't exceed 30 characters to prevent negative repeat values
+    const displayName = name.length > 30 ? name.substring(0, 27) + '...' : name;
+    const padding = Math.max(0, 30 - displayName.length);
+    
     const progressBar = new cliProgress.SingleBar({
       format:
-        `${name}${' '.repeat(30 - name.length)}[{bar}] {percentage}% | ETA: {eta}s | {value}/{total}`,
+        `${displayName}${' '.repeat(padding)}[{bar}] {percentage}% | ETA: {eta}s | {value}/{total}`,
     }, cliProgress.Presets.shades_classic);
-    progressBar.start(adSelection.location.length, 0);
+    
+    // For screenshot capture, we need to count total frames, not just ads
+    let totalItems = adSelection.location.length;
+    if (name.includes('capturing screenshots')) {
+      // We'll update this dynamically as we discover frame counts
+      progressBar.start(100, 0); // Start with 100 as placeholder
+    } else {
+      progressBar.start(totalItems, 0);
+    }
   
+    let processedItems = 0;
+    
     for (const [index, resultChunk] of resultChunks.entries()) {
-      await Promise.all(resultChunk.map(fn));
-      progressBar.update(index * chunkSize + resultChunk.length);
+      if (name.includes('capturing screenshots')) {
+        // Handle screenshot progress differently
+        await Promise.all(resultChunk.map(async (adLocation) => {
+          await fn(adLocation, (current, total) => {
+            // Update progress for each frame captured
+            const overallProgress = ((processedItems * 100) + ((current / total) * 100)) / adSelection.location.length;
+            progressBar.update(Math.min(overallProgress, 100));
+          });
+          processedItems++;
+        }));
+      } else {
+        await Promise.all(resultChunk.map(fn));
+        progressBar.update(index * chunkSize + resultChunk.length);
+      }
     }
     
     progressBar.stop();

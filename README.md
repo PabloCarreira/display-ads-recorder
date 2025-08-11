@@ -6,7 +6,7 @@
 [![Dependencies Status](https://status.david-dm.org/gh/mediamonks/display-ads-recorder.svg)](https://david-dm.org/mediamonks/display-ads-recorder)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
-The Display Ads Recorder is a powerful command-line tool designed to automate the recording of display ads and convert them into multiple formats (video, jpg, and animated gif).
+The Display Ads Recorder is a powerful command-line tool designed to automate the recording of display ads and convert them into multiple formats (video, jpg, and animated gif). Built with Playwright for reliable, modern browser automation.
 
 ## Features
 
@@ -14,16 +14,20 @@ The Display Ads Recorder is a powerful command-line tool designed to automate th
 - 🎵 Audio integration capabilities
 - ⚡ Parallel processing for better performance
 - 🎨 Customizable FPS settings (15, 30, 60)
-- 📦 Optimized file sizes
+- 📦 Optimized file sizes with professional video quality
 - 🚀 Easy integration with existing display ad projects
+- 🎯 Real-time progress tracking during capture
+- 🔧 Modern browser automation with Playwright
 
 ## Prerequisites
 
-- Node.js >= 20.x
+- Node.js >= 16.x (recommended: 18.x or later)
 - NPM >= 8.x
 - Display ads built with [@mediamonks/display-dev-server](https://www.github.com/mediamonks/display-dev-server)
 - Ad's index.html must include `<meta name='ad.size'>` tag
 - Integration with [@mediamonks/display-temple](https://www.github.com/mediamonks/display-temple)
+
+**Note**: Playwright will automatically download the required browser binaries on first installation.
 
 ## Installation
 
@@ -90,10 +94,12 @@ enableAdsRecorder(timeline, config);
 ## Output Formats
 
 ### MP4 Video
-- High-quality video output
-- Customizable FPS
+- High-quality video output with professional encoding (CRF 18)
+- 50Mbps bitrate for superior quality
+- Customizable FPS (15, 30, 60)
 - Optional audio integration
-- Optimized for web delivery
+- H.264 high profile with web optimization
+- Real-time progress tracking during capture
 
 ### Animated GIF
 - Loop or single-play options

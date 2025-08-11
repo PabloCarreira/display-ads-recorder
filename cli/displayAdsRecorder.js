@@ -29,8 +29,18 @@ const findAdsInDirectory = require("../src/util/findAdsInDirectory");
 
   const options = program.opts();
 
+  // Validate JPG file size if provided via CLI
+  if (options.jpg && options.jpg !== true) {
+    const jpgSize = parseInt(options.jpg);
+    if (isNaN(jpgSize) || jpgSize < 1 || jpgSize > 500) {
+      console.error('Error: JPG file size must be a number between 1 and 500 KB');
+      process.exit(1);
+    }
+  }
+
   console.log(
     `Welcome to the ${chalk.green.bold(`Display.Monks Record Tool`)} v${packageJson.version}`,
+    `\n${chalk.blue('✨ Powered by Playwright for enhanced browser automation')}`,
     "\nmake sure you import and include the enableAdsRecorder(timeline, config) function from display temple",
     "\nso the ad can dispatch the right events to the recorder tool",
     "\nsee example here: http://www.github.com/mirkovw/display-record-template"
@@ -124,9 +134,20 @@ const findAdsInDirectory = require("../src/util/findAdsInDirectory");
     {
       type: "input",
       name: "jpgMaxFileSize",
-      message: "Please select max KB filesize for backup image",
+      message: "Please select max KB filesize for backup image (1-500):",
       when: answers => (adSelection.output.includes("jpg") && adSelection.jpgMaxFileSize === true) || answers.output?.includes("jpg"),
       default: 40,
+      validate: (input) => {
+        const num = parseInt(input);
+        if (isNaN(num)) {
+          return 'Please enter a valid number';
+        }
+        if (num < 1 || num > 500) {
+          return 'Please enter a number between 1 and 500 KB';
+        }
+        return true;
+      },
+      filter: (input) => parseInt(input)
     }
   ]
 
